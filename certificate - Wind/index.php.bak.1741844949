@@ -1,0 +1,22 @@
+<?php
+/**
+ * Certificate Validation System
+ * Main entry point
+ */
+
+// Start session
+session_start();
+
+// Include configuration files
+require_once 'config/config.php';
+require_once 'config/database.php';
+require_once 'includes/functions.php';
+
+// Connect to database
+$database = new Database();
+$db = $database->getConnection();
+
+// Redirect to verification page
+header("Location: verify/");
+exit;
+?>

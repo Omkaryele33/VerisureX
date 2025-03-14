@@ -1,0 +1,239 @@
+<?php
+/**
+ * Admin Panel - View Certificate
+ */
+
+// Start session
+require_once __DIR__ . "/../includes/session.php";
+
+// Include configuration files
+require_once '../config/config.php';
+require_once '../config/database.php';
+require_once '../includes/functions.php';
+
+// Connect to database
+$database = new Database();
+$db = $database->getConnection();
+
+// Check if user is logged in
+if (!isLoggedIn()) {
+    redirect('login.php');
+}
+
+// Check if ID is provided
+if (!isset($_GET['id']) || empty($_GET['id'])) {
+    setFlashMessage('error', 'Certificate ID is required');
+    redirect('certificates.php');
+}
+
+// Get certificate ID
+$id = (int)$_GET['id'];
+
+// Get certificate details
+$query = "SELECT c.*, a.username 
+          FROM certificates c 
+          JOIN admins a ON c.created_by = a.id 
+          WHERE c.id = :id";
+$stmt = $db->prepare($query);
+$stmt->bindParam(':id', $id);
+$stmt->execute();
+
+// Check if certificate exists
+if ($stmt->rowCount() === 0) {
+    setFlashMessage('error', 'Certificate not found');
+    redirect('certificates.php');
+}
+
+// Get certificate data
+$certificate = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Page title
+$pageTitle = "View Certificate";
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Certificate - Certificate Validation System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="assets/css/admin.css">
+    <style>
+        .certificate-preview {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+        }
+        .certificate-image {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 5px;
+        }
+        .qr-code-image {
+            max-width: 150px;
+            max-height: 150px;
+        }
+    </style>
+</head>
+<body>
+    <?php include 'includes/header.php'; ?>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <?php include 'includes/sidebar.php'; ?>
+            
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">View Certificate</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <a href="certificates.php" class="btn btn-sm btn-secondary me-2">
+                            <i class="bi bi-arrow-left"></i> Back to List
+                        </a>
+                        <a href="edit_certificate.php?id=<?php echo $certificate['id']; ?>" class="btn btn-sm btn-primary">
+                            <i class="bi bi-pencil"></i> Edit Certificate
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Certificate Details</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-4 fw-bold">Certificate ID:</div>
+                                    <div class="col-md-8"><?php echo htmlspecialchars($certificate['certificate_id']); ?></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-4 fw-bold">Certificate Number:</div>
+                                    <div class="col-md-8"><?php echo htmlspecialchars($certificate['certificate_number'] ?? 'N/A'); ?></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-4 fw-bold">Full Name:</div>
+                                    <div class="col-md-8"><?php echo htmlspecialchars($certificate['full_name']); ?></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-4 fw-bold">Branch Name:</div>
+                                    <div class="col-md-8"><?php echo htmlspecialchars($certificate['branch_name'] ?? 'N/A'); ?></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-4 fw-bold">Grade:</div>
+                                    <div class="col-md-8"><?php echo htmlspecialchars($certificate['grade'] ?? 'N/A'); ?></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-4 fw-bold">Issue Date:</div>
+                                    <div class="col-md-8"><?php echo isset($certificate['issue_date']) ? date('d F Y', strtotime($certificate['issue_date'])) : 'N/A'; ?></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-4 fw-bold">Pass Date:</div>
+                                    <div class="col-md-8"><?php echo isset($certificate['pass_date']) && $certificate['pass_date'] ? date('d F Y', strtotime($certificate['pass_date'])) : 'N/A'; ?></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-4 fw-bold">Created By:</div>
+                                    <div class="col-md-8"><?php echo htmlspecialchars($certificate['username']); ?></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-4 fw-bold">Created At:</div>
+                                    <div class="col-md-8"><?php echo date('d F Y H:i:s', strtotime($certificate['created_at'])); ?></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-4 fw-bold">Certificate Status:</div>
+                                    <div class="col-md-8">
+                                        <?php if ($certificate['is_active']): ?>
+                                            <span class="badge bg-success">Active</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-danger">Inactive</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-4 fw-bold">Validation Status:</div>
+                                    <div class="col-md-8">
+                                        <?php if (isset($certificate['validation_status']) && $certificate['validation_status']): ?>
+                                            <span class="badge bg-success">Valid</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-danger">Invalid</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-4 fw-bold">Verification URL:</div>
+                                    <div class="col-md-8">
+                                        <a href="<?php echo VERIFY_URL . '?id=' . $certificate['certificate_id']; ?>" target="_blank">
+                                            <?php echo VERIFY_URL . '?id=' . $certificate['certificate_id']; ?>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Certificate Content</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="certificate-content">
+                                    <?php echo $certificate['certificate_content']; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Student Photo</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <img src="<?php echo '../uploads/' . $certificate['photo_path']; ?>" alt="Student Photo" class="img-fluid certificate-image">
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">QR Code</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <?php if (!empty($certificate['qr_code_path']) && file_exists(UPLOAD_DIR . $certificate['qr_code_path'])): ?>
+                                    <img src="<?php echo '../uploads/' . $certificate['qr_code_path']; ?>?t=<?php echo time(); ?>" alt="QR Code" class="img-fluid qr-code-image">
+                                    <p class="mt-2 mb-0">
+                                        <a href="<?php echo '../uploads/' . $certificate['qr_code_path']; ?>" download class="btn btn-sm btn-outline-primary mt-2">
+                                            <i class="bi bi-download"></i> Download QR Code
+                                        </a>
+                                    </p>
+                                <?php else: ?>
+                                    <div class="alert alert-warning">
+                                        <p>QR code not found or needs to be regenerated.</p>
+                                        <a href="regenerate_qr.php?id=<?php echo $certificate['id']; ?>" class="btn btn-sm btn-warning">
+                                            <i class="bi bi-arrow-repeat"></i> Regenerate QR Code
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Certificate Preview</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <a href="../verify/?id=<?php echo $certificate['certificate_id']; ?>" target="_blank" class="btn btn-primary">
+                                    <i class="bi bi-eye"></i> View Public Certificate
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/admin.js"></script>
+</body>
+</html>

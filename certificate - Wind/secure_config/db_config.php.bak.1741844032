@@ -1,0 +1,16 @@
+<?php
+/**
+ * Secure Database Credentials
+ * This file should be placed outside the web root in production
+ */
+
+// Database settings
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'certificate_system');
+define('DB_USER', 'root');
+define('DB_PASS', '');
+
+// Additional security settings
+define('HASH_SECRET', '8b7df143d91c716ecfa5fc1730022f6b'); // Random secret for hashing
+define('ENCRYPTION_KEY', '4d6783e91af4e3dfa5fc1720022f6ab'); // For encrypting sensitive data
+?>

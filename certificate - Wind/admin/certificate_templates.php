@@ -1,0 +1,384 @@
+<?php
+/**
+ * CertifyPro - Premium Certificate Validation System
+ * Certificate Template Management
+ */
+
+// Start session
+require_once __DIR__ . "/../includes/session.php";
+
+// Include master initialization file
+require_once 'master_init.php';
+
+// Connect to database
+$database = new Database();
+$db = $database->getConnection();
+
+// Check if user is logged in
+if (!isLoggedIn()) {
+    redirect('login.php');
+}
+
+// Handle template deletion
+if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
+    $template_id = $_GET['id'];
+    
+    // Check if template is in use
+    $query = "SELECT COUNT(*) as count FROM certificates WHERE template_id = :template_id";
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':template_id', $template_id);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($row['count'] > 0) {
+        setFlashMessage('error', 'Cannot delete template. It is currently used by ' . $row['count'] . ' certificate(s).');
+    } else {
+        // Delete template
+        $query = "DELETE FROM certificate_templates WHERE template_id = :id";
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':id', $template_id);
+        
+        if ($stmt->execute()) {
+            // Also delete the template image if it exists
+            $query = "SELECT template_image FROM certificate_templates WHERE template_id = :id";
+            $stmt = $db->prepare($query);
+            $stmt->bindParam(':id', $template_id);
+            $stmt->execute();
+            $template = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($template && !empty($template['template_image'])) {
+                $image_path = '../uploads/templates/' . $template['template_image'];
+                if (file_exists($image_path)) {
+                    unlink($image_path);
+                }
+            }
+            
+            setFlashMessage('success', 'Template deleted successfully.');
+        } else {
+            setFlashMessage('error', 'Error deleting template.');
+        }
+    }
+    
+    redirect('certificate_templates.php');
+}
+
+// Get all templates
+$query = "SELECT 
+    ct.template_id AS template_id, 
+    ct.template_name AS name, 
+    ct.description,
+    ct.created_at,
+    COUNT(c.id) AS usage_count
+FROM certificate_templates ct
+LEFT JOIN certificates c ON ct.template_id = c.template_id
+GROUP BY ct.template_id";
+
+$stmt = $db->prepare($query);
+$stmt->execute();
+$templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Page title
+$pageTitle = "Certificate Templates";
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo $pageTitle;?> - CertifyPro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+    <?php include 'includes/header.php';?>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <?php include 'includes/sidebar.php';?>
+            
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="page-header pt-3 pb-2 mb-4">
+                    <div>
+                        <h1><?php echo $pageTitle;?></h1>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="index.php">Home</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Certificate Templates</li>
+                            </ol>
+                        </nav>
+                    </div>
+                    <div class="d-flex">
+                        <a href="create_template.php" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Create New Template
+                        </a>
+                    </div>
+                </div>
+                
+                <?php if ($flash = getFlashMessage()):;?>
+                <div class="alert alert-<?php echo $flash['type'];?> alert-dismissible fade show" role="alert">
+                    <?php echo $flash['message'];?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <?php endif;?>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Available Templates</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <?php if (count($templates) > 0):;?>
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-responsive-cards mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Preview</th>
+                                                <th>Template Name</th>
+                                                <th>Description</th>
+                                                <th>Usage</th>
+                                                <th>Created</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($templates as $template):;?>
+                                            <tr>
+                                                <td data-label="Preview">
+                                                    <?php if (!empty($template['template_image'])):;?>
+                                                    <img src="../uploads/templates/<?php echo $template['template_image'];?>" 
+                                                         alt="<?php echo htmlspecialchars($template['name']);?>" 
+                                                         class="template-thumbnail" 
+                                                         onclick="previewTemplate('<?php echo htmlspecialchars($template['name']);?>', '../uploads/templates/<?php echo $template['template_image'];?>')">
+                                                    <?php else:;?>
+                                                    <div class="template-thumbnail-placeholder">
+                                                        <i class="bi bi-file-earmark-text"></i>
+                                                    </div>
+                                                    <?php endif;?>
+                                                </td>
+                                                <td data-label="Template Name"><?php echo htmlspecialchars($template['name']);?></td>
+                                                <td data-label="Description">
+                                                    <?php echo !empty($template['description']) ? 
+                                                              htmlspecialchars(substr($template['description'], 0, 100)) . (strlen($template['description']) > 100 ? '...' : '') : 
+                                                              '<span class="text-muted">No description</span>';?>
+                                                </td>
+                                                <td data-label="Usage">
+                                                    <?php if ($template['usage_count'] > 0):;?>
+                                                    <span class="badge bg-primary"><?php echo $template['usage_count'];?> certificate(s)</span>
+                                                    <?php else:;?>
+                                                    <span class="badge bg-secondary">Not used</span>
+                                                    <?php endif;?>
+                                                </td>
+                                                <td data-label="Created">
+                                                    <?php echo isset($template['created_at']) ? date('M j, Y', strtotime($template['created_at'])) : 'N/A';?>
+                                                </td>
+                                                <td data-label="Actions">
+                                                    <div class="btn-group btn-group-sm">
+                                                        <a href="view_template.php?id=<?php echo $template['template_id'];?>" class="btn btn-outline-primary">
+                                                            <i class="bi bi-eye"></i>
+                                                        </a>
+                                                        <a href="edit_template.php?id=<?php echo $template['template_id'];?>" class="btn btn-outline-primary">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </a>
+                                                        <?php if ($template['usage_count'] == 0):;?>
+                                                        <a href="certificate_templates.php?action=delete&id=<?php echo $template['template_id'];?>" 
+                                                           class="btn btn-outline-danger delete-confirm"
+                                                           data-confirm-message="Are you sure you want to delete this template? This action cannot be undone.">
+                                                            <i class="bi bi-trash"></i>
+                                                        </a>
+                                                        <?php else:;?>
+                                                        <button class="btn btn-outline-danger" disabled title="Cannot delete template in use">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                        <?php endif;?>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <?php endforeach;?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <?php else:;?>
+                                <div class="alert alert-info m-4">
+                                    <i class="bi bi-info-circle me-2"></i> No certificate templates found. <a href="create_template.php" class="alert-link">Create your first template</a>.
+                                </div>
+                                <?php endif;?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Template Guidelines</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-4">
+                                    <h6 class="fw-bold">Template Dimensions</h6>
+                                    <p>For best results, your certificate template should have the following specifications:</p>
+                                    <ul>
+                                        <li>Landscape orientation (recommended)</li>
+                                        <li>Resolution: 300 DPI</li>
+                                        <li>Dimensions: 11 x 8.5 inches (Letter size)</li>
+                                        <li>File format: PNG, JPG, or PDF</li>
+                                        <li>Maximum file size: 5MB</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <h6 class="fw-bold">Content Placeholders</h6>
+                                    <p>You can use the following placeholders in your template design:</p>
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Placeholder</th>
+                                                    <th>Description</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td><code>{{recipient_name}}</code></td>
+                                                    <td>Full name of the certificate recipient</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>{{course_name}}</code></td>
+                                                    <td>Name of the course or program</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>{{issue_date}}</code></td>
+                                                    <td>Certificate issue date</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>{{expiry_date}}</code></td>
+                                                    <td>Certificate expiration date (if applicable)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>{{certificate_id}}</code></td>
+                                                    <td>Unique certificate identification number</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>{{qr_code}}</code></td>
+                                                    <td>QR code for certificate verification</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">Quick Tips for Professional Templates</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="quick-tip-icon me-3">
+                                            <i class="bi bi-palette"></i>
+                                        </div>
+                                        <h6 class="fw-bold mb-0">Use appropriate colors</h6>
+                                    </div>
+                                    <p class="ps-5 text-muted">Choose colors that reflect your brand identity. Use a limited color palette (2-3 colors) for a professional look.</p>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="quick-tip-icon me-3">
+                                            <i class="bi bi-type"></i>
+                                        </div>
+                                        <h6 class="fw-bold mb-0">Typography matters</h6>
+                                    </div>
+                                    <p class="ps-5 text-muted">Use legible fonts. Combine a decorative font for headings with a clean, simple font for other text.</p>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="quick-tip-icon me-3">
+                                            <i class="bi bi-layout-text-window"></i>
+                                        </div>
+                                        <h6 class="fw-bold mb-0">Balance visual elements</h6>
+                                    </div>
+                                    <p class="ps-5 text-muted">Ensure there's enough white space. Don't overcrowd the certificate with too many elements.</p>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="quick-tip-icon me-3">
+                                            <i class="bi bi-shield-check"></i>
+                                        </div>
+                                        <h6 class="fw-bold mb-0">Include security features</h6>
+                                    </div>
+                                    <p class="ps-5 text-muted">Consider adding watermarks, holograms, or other security elements to prevent forgery.</p>
+                                </div>
+                                
+                                <div class="alert alert-primary">
+                                    <div class="d-flex">
+                                        <div class="me-3">
+                                            <i class="bi bi-lightbulb-fill fs-3"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="alert-heading fw-bold">Need design help?</h6>
+                                            <p class="mb-0">Our premium support includes custom certificate template design. Contact us for assistance.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <!-- Template Preview Modal -->
+    <div class="modal fade" id="templatePreviewModal" tabindex="-1" aria-labelledby="templatePreviewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="templatePreviewModalLabel">Template Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="templatePreviewImage" src="" alt="Template Preview" class="img-fluid">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/admin.js"></script>
+    <script>
+        // Template preview function
+        function previewTemplate(templateName, imagePath) {
+            const modal = new bootstrap.Modal(document.getElementById('templatePreviewModal'));
+            document.getElementById('templatePreviewModalLabel').textContent = 'Preview: ' + templateName;
+            document.getElementById('templatePreviewImage').src = imagePath;
+            modal.show();
+        }
+        
+        // Confirm delete
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.delete-confirm').forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    const message = this.getAttribute('data-confirm-message') || 'Are you sure you want to delete this item?';
+                    if (!confirm(message)) {
+                        e.preventDefault();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

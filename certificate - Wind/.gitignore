@@ -1,0 +1,49 @@
+# Configuration files
+config/config.php
+config/database.php
+
+# Composer
+/vendor/
+composer.lock
+
+# Uploaded files
+/uploads/*
+!/uploads/.gitkeep
+/assets/img/qrcodes/*
+!/assets/img/qrcodes/.gitkeep
+
+# IDE and editor files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+
+# Cache and temporary files
+/cache/*
+!/cache/.gitkeep
+/temp/*
+!/temp/.gitkeep
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Backup files
+*.bak
+*.swp
+*~ 

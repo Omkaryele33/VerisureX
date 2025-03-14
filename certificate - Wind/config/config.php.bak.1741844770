@@ -1,0 +1,42 @@
+<?php
+/**
+ * Configuration File
+ * This file contains database credentials and other configuration settings
+ */
+
+// Include constants first if they haven't been included yet
+if (!defined('BASE_URL')) {
+    require_once __DIR__ . "/constants.php";
+}
+
+// Database credentials - only define if not already defined
+if (!defined('DB_HOST')) {
+    define("DB_HOST", "localhost");
+}
+
+// Check which database exists and use the correct one
+ = mysqli_connect("localhost", "root", "");
+if () {
+     = mysqli_query(, "SHOW DATABASES LIKE 'certificate_system'");
+    if (mysqli_num_rows() > 0) {
+        define("DB_NAME", "certificate_system");
+    } else {
+        define("DB_NAME", "certificate_db");
+    }
+    mysqli_close();
+} else {
+    // Default fallback
+    define("DB_NAME", "certificate_system");
+}
+
+if (!defined('DB_USER')) {
+    define("DB_USER", "root");
+}
+if (!defined('DB_PASS')) {
+    define("DB_PASS", "");
+}
+
+// Error reporting
+ini_set("display_errors", 1);
+ini_set("display_startup_errors", 1);
+error_reporting(E_ALL);

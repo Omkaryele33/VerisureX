@@ -1,0 +1,80 @@
+<?php
+/**
+ * Application Configuration
+ */
+
+// Include secure credentials
+require_once dirname(__DIR__) . '/secure_config/db_config.php';
+
+// Base URL - Change this to match your domain with protocol detection
+define('BASE_URL', (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://{$_SERVER['HTTP_HOST']}/certificate");
+
+// Admin panel URL
+define('ADMIN_URL', BASE_URL . '/admin');
+
+// Verification URL
+define('VERIFY_URL', BASE_URL . '/verify');
+
+// File upload settings
+define('MAX_FILE_SIZE', 5 * 1024 * 1024); // 5MB
+define('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png']);
+define('UPLOAD_DIR', dirname(__DIR__) . '/uploads/');
+define('QR_DIR', UPLOAD_DIR . 'qrcodes/');
+
+// Security settings
+if (!defined('RATE_LIMIT')) if (!defined('RATE_LIMIT')) if (!defined('RATE_LIMIT')) if (!defined('RATE_LIMIT')) if (!defined('RATE_LIMIT')) if (!defined('RATE_LIMIT')) if (!defined('RATE_LIMIT')) if (!defined('RATE_LIMIT')) if (!defined('RATE_LIMIT')) define('RATE_LIMIT', 10); // 10 requests per minute
+if (!defined('RATE_LIMIT_WINDOW')) if (!defined('RATE_LIMIT_WINDOW')) if (!defined('RATE_LIMIT_WINDOW')) if (!defined('RATE_LIMIT_WINDOW')) if (!defined('RATE_LIMIT_WINDOW')) if (!defined('RATE_LIMIT_WINDOW')) if (!defined('RATE_LIMIT_WINDOW')) if (!defined('RATE_LIMIT_WINDOW')) if (!defined('RATE_LIMIT_WINDOW')) define('RATE_LIMIT_WINDOW', 60); // 60 seconds
+if (!defined('RATE_LIMIT_UNIQUE_KEYS')) if (!defined('RATE_LIMIT_UNIQUE_KEYS')) if (!defined('RATE_LIMIT_UNIQUE_KEYS')) if (!defined('RATE_LIMIT_UNIQUE_KEYS')) if (!defined('RATE_LIMIT_UNIQUE_KEYS')) if (!defined('RATE_LIMIT_UNIQUE_KEYS')) if (!defined('RATE_LIMIT_UNIQUE_KEYS')) if (!defined('RATE_LIMIT_UNIQUE_KEYS')) if (!defined('RATE_LIMIT_UNIQUE_KEYS')) define('RATE_LIMIT_UNIQUE_KEYS', true); // Use combination of IP, user-agent, and session ID
+
+// Session settings - Improved security
+if (!defined('SESSION_NAME')) if (!defined('SESSION_NAME')) if (!defined('SESSION_NAME')) if (!defined('SESSION_NAME')) if (!defined('SESSION_NAME')) if (!defined('SESSION_NAME')) if (!defined('SESSION_NAME')) if (!defined('SESSION_NAME')) define('SESSION_NAME', 'certificate_admin_secure');
+if (!defined('SESSION_LIFETIME')) if (!defined('SESSION_LIFETIME')) if (!defined('SESSION_LIFETIME')) if (!defined('SESSION_LIFETIME')) if (!defined('SESSION_LIFETIME')) if (!defined('SESSION_LIFETIME')) if (!defined('SESSION_LIFETIME')) if (!defined('SESSION_LIFETIME')) define('SESSION_LIFETIME', 1800); // 30 minutes (reduced from 1 hour)
+if (!defined('SESSION_SECURE')) if (!defined('SESSION_SECURE')) if (!defined('SESSION_SECURE')) if (!defined('SESSION_SECURE')) if (!defined('SESSION_SECURE')) if (!defined('SESSION_SECURE')) if (!defined('SESSION_SECURE')) if (!defined('SESSION_SECURE')) define('SESSION_SECURE', isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on');
+if (!defined('SESSION_HTTPONLY')) if (!defined('SESSION_HTTPONLY')) if (!defined('SESSION_HTTPONLY')) if (!defined('SESSION_HTTPONLY')) if (!defined('SESSION_HTTPONLY')) if (!defined('SESSION_HTTPONLY')) if (!defined('SESSION_HTTPONLY')) if (!defined('SESSION_HTTPONLY')) define('SESSION_HTTPONLY', true);
+if (!defined('CSRF_TOKEN_LENGTH')) if (!defined('CSRF_TOKEN_LENGTH')) if (!defined('CSRF_TOKEN_LENGTH')) if (!defined('CSRF_TOKEN_LENGTH')) if (!defined('CSRF_TOKEN_LENGTH')) if (!defined('CSRF_TOKEN_LENGTH')) if (!defined('CSRF_TOKEN_LENGTH')) if (!defined('CSRF_TOKEN_LENGTH')) if (!defined('CSRF_TOKEN_LENGTH')) define('CSRF_TOKEN_LENGTH', 64);
+if (!defined('CSRF_TOKEN_EXPIRY')) if (!defined('CSRF_TOKEN_EXPIRY')) if (!defined('CSRF_TOKEN_EXPIRY')) if (!defined('CSRF_TOKEN_EXPIRY')) if (!defined('CSRF_TOKEN_EXPIRY')) if (!defined('CSRF_TOKEN_EXPIRY')) if (!defined('CSRF_TOKEN_EXPIRY')) if (!defined('CSRF_TOKEN_EXPIRY')) if (!defined('CSRF_TOKEN_EXPIRY')) define('CSRF_TOKEN_EXPIRY', 1800); // 30 minutes
+
+// Password policy
+if (!defined('PASSWORD_MIN_LENGTH')) if (!defined('PASSWORD_MIN_LENGTH')) if (!defined('PASSWORD_MIN_LENGTH')) if (!defined('PASSWORD_MIN_LENGTH')) if (!defined('PASSWORD_MIN_LENGTH')) if (!defined('PASSWORD_MIN_LENGTH')) if (!defined('PASSWORD_MIN_LENGTH')) if (!defined('PASSWORD_MIN_LENGTH')) if (!defined('PASSWORD_MIN_LENGTH')) define('PASSWORD_MIN_LENGTH', 12);
+if (!defined('PASSWORD_REQUIRE_MIXED_CASE')) if (!defined('PASSWORD_REQUIRE_MIXED_CASE')) if (!defined('PASSWORD_REQUIRE_MIXED_CASE')) if (!defined('PASSWORD_REQUIRE_MIXED_CASE')) if (!defined('PASSWORD_REQUIRE_MIXED_CASE')) if (!defined('PASSWORD_REQUIRE_MIXED_CASE')) if (!defined('PASSWORD_REQUIRE_MIXED_CASE')) if (!defined('PASSWORD_REQUIRE_MIXED_CASE')) if (!defined('PASSWORD_REQUIRE_MIXED_CASE')) define('PASSWORD_REQUIRE_MIXED_CASE', true);
+if (!defined('PASSWORD_REQUIRE_NUMBERS')) if (!defined('PASSWORD_REQUIRE_NUMBERS')) if (!defined('PASSWORD_REQUIRE_NUMBERS')) if (!defined('PASSWORD_REQUIRE_NUMBERS')) if (!defined('PASSWORD_REQUIRE_NUMBERS')) if (!defined('PASSWORD_REQUIRE_NUMBERS')) if (!defined('PASSWORD_REQUIRE_NUMBERS')) if (!defined('PASSWORD_REQUIRE_NUMBERS')) if (!defined('PASSWORD_REQUIRE_NUMBERS')) define('PASSWORD_REQUIRE_NUMBERS', true);
+if (!defined('PASSWORD_REQUIRE_SYMBOLS')) if (!defined('PASSWORD_REQUIRE_SYMBOLS')) if (!defined('PASSWORD_REQUIRE_SYMBOLS')) if (!defined('PASSWORD_REQUIRE_SYMBOLS')) if (!defined('PASSWORD_REQUIRE_SYMBOLS')) if (!defined('PASSWORD_REQUIRE_SYMBOLS')) if (!defined('PASSWORD_REQUIRE_SYMBOLS')) if (!defined('PASSWORD_REQUIRE_SYMBOLS')) if (!defined('PASSWORD_REQUIRE_SYMBOLS')) define('PASSWORD_REQUIRE_SYMBOLS', true);
+if (!defined('ACCOUNT_LOCKOUT_THRESHOLD')) if (!defined('ACCOUNT_LOCKOUT_THRESHOLD')) if (!defined('ACCOUNT_LOCKOUT_THRESHOLD')) if (!defined('ACCOUNT_LOCKOUT_THRESHOLD')) if (!defined('ACCOUNT_LOCKOUT_THRESHOLD')) if (!defined('ACCOUNT_LOCKOUT_THRESHOLD')) if (!defined('ACCOUNT_LOCKOUT_THRESHOLD')) if (!defined('ACCOUNT_LOCKOUT_THRESHOLD')) define('ACCOUNT_LOCKOUT_THRESHOLD', 5); // Lock account after 5 failed attempts
+if (!defined('ACCOUNT_LOCKOUT_DURATION')) if (!defined('ACCOUNT_LOCKOUT_DURATION')) if (!defined('ACCOUNT_LOCKOUT_DURATION')) if (!defined('ACCOUNT_LOCKOUT_DURATION')) if (!defined('ACCOUNT_LOCKOUT_DURATION')) if (!defined('ACCOUNT_LOCKOUT_DURATION')) if (!defined('ACCOUNT_LOCKOUT_DURATION')) if (!defined('ACCOUNT_LOCKOUT_DURATION')) define('ACCOUNT_LOCKOUT_DURATION', 900); // 15 minutes lockout
+
+// File security
+define('FILE_PERMISSIONS', 0644);
+define('DIR_PERMISSIONS', 0755);
+define('USE_RANDOM_FILENAMES', true);
+
+// Error reporting - Log errors but don't display them
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', dirname(__DIR__) . '/logs/error.log');
+error_reporting(E_ALL);
+
+// Time zone
+date_default_timezone_set('Asia/Kolkata');
+
+// Create necessary directories
+$directories = [
+    UPLOAD_DIR,
+    QR_DIR,
+    dirname(__DIR__) . '/logs'
+];
+
+foreach ($directories as $dir) {
+    if (!file_exists($dir)) {
+        mkdir($dir, DIR_PERMISSIONS, true);
+        // Place a .htaccess file to prevent direct access
+        file_put_contents($dir . '/.htaccess', "Deny from all\n");
+    }
+}
+
+// Configure secure session
+ini_set('session.cookie_httponly', 1);
+ini_set('session.cookie_secure', SESSION_SECURE);
+ini_set('session.use_only_cookies', 1);
+ini_set('session.cookie_samesite', 'Strict');
+ini_set('session.gc_maxlifetime', SESSION_LIFETIME);
+?>

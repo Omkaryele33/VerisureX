@@ -1,0 +1,323 @@
+<?php
+/**
+ * CertifyPro - Premium Certificate Validation System
+ * Home page
+ */
+
+// Start session
+require_once __DIR__ . "/../includes/session.php";
+
+// Include configuration files
+require_once 'config/config.php';
+require_once 'config/database.php';
+require_once 'includes/functions.php';
+
+// Connect to database
+$database = new Database();
+$db = $database->getConnection();
+
+// Get statistics
+$certificateCount = 0;
+$verificationCount = 0;
+
+try {
+    $query = "SELECT COUNT(*) as total FROM certificates";
+    $stmt = $db->prepare($query);
+    $stmt->execute();
+    $certificateCount = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+    $query = "SELECT COUNT(*) as total FROM verification_logs";
+    $stmt = $db->prepare($query);
+    $stmt->execute();
+    $verificationCount = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+} catch (PDOException $e) {
+    // Silently fail and use default values
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CertifyPro - Premium Certificate Verification System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="./">
+                <img src="assets/img/logo.png" alt="CertifyPro Logo" height="40" class="me-2">
+                <span>CertifyPro</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="./">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="verify/">Verify Certificate</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#about">About</a>
+                    </li>
+                    <li class="nav-item ms-lg-2">
+                        <a class="btn btn-primary" href="admin/">Admin Login</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="py-5 mb-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h1 class="display-4 fw-bold mb-3">Secure Certificate Verification Made Simple</h1>
+                    <p class="lead mb-4">Our advanced platform provides instant verification of certificates with military-grade security. Perfect for educational institutions, training centers, and professional organizations.</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="verify/" class="btn btn-primary btn-lg btn-icon">
+                            <i class="bi bi-shield-check"></i> Verify Certificate
+                        </a>
+                        <a href="admin/" class="btn btn-outline-primary btn-lg btn-icon">
+                            <i class="bi bi-lock"></i> Admin Portal
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-6 mt-5 mt-lg-0 text-center">
+                    <img src="assets/img/certificate-illustration.png" alt="Certificate Verification" class="img-fluid">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Stats Section -->
+    <section class="py-4 py-md-5 bg-primary text-white">
+        <div class="container">
+            <div class="row text-center justify-content-center">
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <div class="px-4">
+                        <h2 class="display-5 fw-bold"><?php echo number_format($certificateCount); ?>+</h2>
+                        <p class="h5">Certificates Issued</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <div class="px-4">
+                        <h2 class="display-5 fw-bold"><?php echo number_format($verificationCount); ?>+</h2>
+                        <p class="h5">Verifications Performed</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="px-4">
+                        <h2 class="display-5 fw-bold">100%</h2>
+                        <p class="h5">Secure & Reliable</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="h1 fw-bold">Premium Features</h2>
+                <p class="lead">All the tools you need to manage and verify certificates with confidence</p>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="bi bi-qr-code"></i>
+                        </div>
+                        <h3 class="feature-title">QR Code Verification</h3>
+                        <p>Generate secure QR codes for each certificate that can be scanned for instant verification.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="bi bi-shield-lock"></i>
+                        </div>
+                        <h3 class="feature-title">Tamper-Proof Certificates</h3>
+                        <p>Advanced cryptographic hashing ensures certificates cannot be forged or tampered with.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="bi bi-database-check"></i>
+                        </div>
+                        <h3 class="feature-title">Comprehensive Database</h3>
+                        <p>Store and manage thousands of certificates with detailed information and verification histories.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                        <h3 class="feature-title">Advanced Analytics</h3>
+                        <p>Track verification patterns and gain valuable insights with detailed reporting tools.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="bi bi-check2-circle"></i>
+                        </div>
+                        <h3 class="feature-title">Bulk Certificate Creation</h3>
+                        <p>Generate multiple certificates at once with our streamlined batch processing system.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="bi bi-people"></i>
+                        </div>
+                        <h3 class="feature-title">Role-Based Access</h3>
+                        <p>Control who can create, manage, and view certificates with customizable permissions.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Call to Action -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <div class="row justify-content-center text-center">
+                <div class="col-lg-8">
+                    <h2 class="h1 fw-bold mb-4">Ready to verify a certificate?</h2>
+                    <p class="lead mb-4">Enter a certificate ID or scan a QR code to instantly check its authenticity.</p>
+                    <a href="verify/" class="btn btn-primary btn-lg">Verify Now</a>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- About Section -->
+    <section id="about" class="py-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-4 mb-lg-0">
+                    <h2 class="h1 fw-bold mb-4">About CertifyPro</h2>
+                    <p class="lead">CertifyPro is a premium certificate validation system designed to provide secure, reliable verification for educational institutions, training centers, and professional organizations.</p>
+                    <p>Our system combines cutting-edge security features with an intuitive user interface to deliver a seamless verification experience. Whether you're issuing a handful of certificates or thousands, CertifyPro provides the tools you need to manage and verify them with confidence.</p>
+                    <p>With features like QR code scanning, tamper-proof certificates, and comprehensive analytics, CertifyPro is the perfect solution for organizations that need to maintain the integrity and credibility of their certification process.</p>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-body p-4">
+                            <h4 class="mb-3">Why Choose CertifyPro?</h4>
+                            <ul class="list-unstyled">
+                                <li class="mb-3">
+                                    <div class="d-flex">
+                                        <div class="me-3">
+                                            <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                                        </div>
+                                        <div>
+                                            <h5>Enterprise-Grade Security</h5>
+                                            <p class="text-muted">Our platform uses industry-standard encryption and security protocols to protect your data.</p>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="mb-3">
+                                    <div class="d-flex">
+                                        <div class="me-3">
+                                            <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                                        </div>
+                                        <div>
+                                            <h5>Intuitive User Interface</h5>
+                                            <p class="text-muted">Easy-to-use admin panel and verification interface that requires minimal training.</p>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="d-flex">
+                                        <div class="me-3">
+                                            <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                                        </div>
+                                        <div>
+                                            <h5>Comprehensive Support</h5>
+                                            <p class="text-muted">Dedicated support team available to help you with any questions or issues.</p>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-4 mb-lg-0">
+                    <img src="assets/img/logo.png" alt="CertifyPro Logo" class="footer-logo">
+                    <p>Premium certificate validation system for educational institutions, training centers, and professional organizations.</p>
+                </div>
+                <div class="col-lg-2 col-md-4 mb-4 mb-md-0">
+                    <div class="footer-links">
+                        <h5>Navigation</h5>
+                        <ul>
+                            <li><a href="./">Home</a></li>
+                            <li><a href="verify/">Verify Certificate</a></li>
+                            <li><a href="#features">Features</a></li>
+                            <li><a href="#about">About</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-4 mb-4 mb-md-0">
+                    <div class="footer-links">
+                        <h5>Resources</h5>
+                        <ul>
+                            <li><a href="#">Documentation</a></li>
+                            <li><a href="#">API Reference</a></li>
+                            <li><a href="#">Tutorials</a></li>
+                            <li><a href="#">Support</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-4">
+                    <div class="footer-links">
+                        <h5>Contact</h5>
+                        <ul>
+                            <li><a href="mailto:info@certifypro.com">info@certifypro.com</a></li>
+                            <li><a href="tel:+1234567890">+1 (234) 567-890</a></li>
+                            <li><a href="#">123 Certification Street,</a></li>
+                            <li><a href="#">New York, NY 10001</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; <?php echo date('Y'); ?> CertifyPro. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

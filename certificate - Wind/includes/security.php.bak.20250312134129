@@ -1,0 +1,380 @@
+<?php
+/**
+ * Security functions for the certificate validation system
+ * This file includes advanced security features to protect against common vulnerabilities
+ */
+
+/**
+ * Generate a new CSRF token
+ * @return string The generated token
+ */
+function generateCSRFToken() {
+    // Generate a cryptographically secure random token
+    $token = bin2hex(random_bytes(CSRF_TOKEN_LENGTH / 2)); // Each byte becomes 2 hex chars
+    
+    // Store the token in the session
+    $_SESSION['csrf_token'] = $token;
+    $_SESSION['csrf_token_time'] = time();
+    
+    return $token;
+}
+
+/**
+ * Validate CSRF token
+ * @param string $token The token to validate
+ * @return bool True if valid, false otherwise
+ */
+function validateCSRFToken($token) {
+    // Check if token exists and matches
+    if (!isset($_SESSION['csrf_token']) || !isset($_SESSION['csrf_token_time'])) {
+        return false;
+    }
+    
+    // Check token expiry
+    if (time() - $_SESSION['csrf_token_time'] > CSRF_TOKEN_EXPIRY) {
+        unset($_SESSION['csrf_token']);
+        unset($_SESSION['csrf_token_time']);
+        return false;
+    }
+    
+    // Validate token
+    if (hash_equals($_SESSION['csrf_token'], $token)) {
+        // Generate a new token for the next request (one-time use)
+        generateCSRFToken();
+        return true;
+    }
+    
+    return false;
+}
+
+/**
+ * Get CSRF token form field
+ * @return string HTML for a hidden input field with the CSRF token
+ */
+function getCSRFTokenField() {
+    $token = generateCSRFToken();
+    return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars($token) . '">';
+}
+
+/**
+ * Enhanced password validation according to policy
+ * @param string $password The password to validate
+ * @return array Array with 'valid' (bool) and 'message' (string) keys
+ */
+function validatePassword($password) {
+    $result = [
+        'valid' => true,
+        'message' => 'Password meets requirements.'
+    ];
+    
+    // Check password length
+    if (strlen($password) < PASSWORD_MIN_LENGTH) {
+        $result['valid'] = false;
+        $result['message'] = "Password must be at least " . PASSWORD_MIN_LENGTH . " characters long.";
+        return $result;
+    }
+    
+    // Check for mixed case if required
+    if (PASSWORD_REQUIRE_MIXED_CASE && !preg_match('/[a-z]/', $password) || !preg_match('/[A-Z]/', $password)) {
+        $result['valid'] = false;
+        $result['message'] = "Password must contain both uppercase and lowercase letters.";
+        return $result;
+    }
+    
+    // Check for numbers if required
+    if (PASSWORD_REQUIRE_NUMBERS && !preg_match('/[0-9]/', $password)) {
+        $result['valid'] = false;
+        $result['message'] = "Password must contain at least one number.";
+        return $result;
+    }
+    
+    // Check for symbols if required
+    if (PASSWORD_REQUIRE_SYMBOLS && !preg_match('/[^a-zA-Z0-9]/', $password)) {
+        $result['valid'] = false;
+        $result['message'] = "Password must contain at least one special character.";
+        return $result;
+    }
+    
+    return $result;
+}
+
+/**
+ * Enhanced rate limiting using multiple factors
+ * @param string $action The action being rate limited
+ * @param string $ip IP address of the requester
+ * @param string $userId Optional user ID for authenticated users
+ * @return bool True if rate limited, false otherwise
+ */
+function enhancedRateLimiting($action, $ip, $userId = null) {
+    global $db;
+    
+    // Create a unique identifier based on IP and user-agent (if enabled)
+    $identifier = $ip;
+    
+    if (defined('RATE_LIMIT_UNIQUE_KEYS') && RATE_LIMIT_UNIQUE_KEYS) {
+        $userAgent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : 'Unknown';
+        $sessionId = session_id();
+        $identifier = hash('sha256', $ip . $userAgent . $sessionId . ($userId ?? ''));
+    }
+    
+    // Get current timestamp
+    $now = time();
+    $timeWindow = $now - RATE_LIMIT_WINDOW;
+    
+    // Query for recent requests
+    $query = "SELECT COUNT(*) as count FROM rate_limits 
+              WHERE identifier = :identifier 
+              AND action = :action 
+              AND timestamp > :time_window";
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':identifier', $identifier);
+    $stmt->bindParam(':action', $action);
+    $stmt->bindParam(':time_window', $timeWindow);
+    $stmt->execute();
+    
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $count = $result['count'];
+    
+    // Check if limit exceeded
+    if ($count >= RATE_LIMIT) {
+        // Log rate limit hit
+        error_log("Rate limit exceeded for {$action} by {$ip}");
+        return true; // Rate limited
+    }
+    
+    // Log this request
+    $query = "INSERT INTO rate_limits (identifier, action, timestamp, ip) 
+              VALUES (:identifier, :action, :timestamp, :ip)";
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':identifier', $identifier);
+    $stmt->bindParam(':action', $action);
+    $stmt->bindParam(':timestamp', $now);
+    $stmt->bindParam(':ip', $ip);
+    $stmt->execute();
+    
+    // Clean up old entries occasionally (1% chance to avoid doing this on every request)
+    if (rand(1, 100) === 1) {
+        $cleanupTime = $now - (RATE_LIMIT_WINDOW * 2); // Keep a bit of history
+        $query = "DELETE FROM rate_limits WHERE timestamp < :cleanup_time";
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':cleanup_time', $cleanupTime);
+        $stmt->execute();
+    }
+    
+    return false; // Not rate limited
+}
+
+/**
+ * Secure random filename generator
+ * @param string $extension File extension
+ * @return string Random filename with extension
+ */
+function secureRandomFilename($extension) {
+    return bin2hex(random_bytes(16)) . '.' . $extension;
+}
+
+/**
+ * Create digital signature for certificate data
+ * @param array $certificateData The certificate data to sign
+ * @return string|false The signature or false on failure
+ */
+function signCertificateData($certificateData) {
+    // Skip if digital signatures are not enabled
+    if (!defined('ENABLE_DIGITAL_SIGNATURES') || !ENABLE_DIGITAL_SIGNATURES) {
+        return false;
+    }
+    
+    // Check if private key exists
+    if (!defined('SIGNATURE_KEY_FILE') || !file_exists(SIGNATURE_KEY_FILE)) {
+        error_log("Private key file not found for digital signature");
+        return false;
+    }
+    
+    try {
+        // Load private key
+        $privateKey = openssl_pkey_get_private(file_get_contents(SIGNATURE_KEY_FILE));
+        if (!$privateKey) {
+            error_log("Failed to load private key: " . openssl_error_string());
+            return false;
+        }
+        
+        // Create a serialized representation of the data to sign
+        $dataToSign = json_encode($certificateData);
+        
+        // Sign the data
+        $signature = null;
+        if (!openssl_sign($dataToSign, $signature, $privateKey, SIGNATURE_ALGORITHM)) {
+            error_log("Failed to create signature: " . openssl_error_string());
+            return false;
+        }
+        
+        // Free the key resource
+        openssl_free_key($privateKey);
+        
+        // Return base64 encoded signature
+        return base64_encode($signature);
+    } catch (Exception $e) {
+        error_log("Error creating digital signature: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Verify digital signature for certificate data
+ * @param array $certificateData The certificate data
+ * @param string $signature The base64 encoded signature
+ * @return bool True if signature is valid, false otherwise
+ */
+function verifyCertificateSignature($certificateData, $signature) {
+    // Skip if digital signatures are not enabled
+    if (!defined('ENABLE_DIGITAL_SIGNATURES') || !ENABLE_DIGITAL_SIGNATURES) {
+        return true; // Consider valid if signatures are not enabled
+    }
+    
+    // Check if public key exists
+    $publicKeyFile = dirname(SIGNATURE_KEY_FILE) . '/public_key.pem';
+    if (!file_exists($publicKeyFile)) {
+        error_log("Public key file not found for signature verification");
+        return false;
+    }
+    
+    try {
+        // Load public key
+        $publicKey = openssl_pkey_get_public(file_get_contents($publicKeyFile));
+        if (!$publicKey) {
+            error_log("Failed to load public key: " . openssl_error_string());
+            return false;
+        }
+        
+        // Create a serialized representation of the data to verify
+        $dataToVerify = json_encode($certificateData);
+        
+        // Decode signature
+        $binarySignature = base64_decode($signature);
+        
+        // Verify the signature
+        $result = openssl_verify($dataToVerify, $binarySignature, $publicKey, SIGNATURE_ALGORITHM);
+        
+        // Free the key resource
+        openssl_free_key($publicKey);
+        
+        if ($result === 1) {
+            return true; // Signature verified
+        } else if ($result === 0) {
+            return false; // Signature invalid
+        } else {
+            error_log("Error verifying signature: " . openssl_error_string());
+            return false;
+        }
+    } catch (Exception $e) {
+        error_log("Error verifying digital signature: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Track failed login attempts and handle account lockouts
+ * @param string $username The username that failed login
+ * @return bool True if account is locked, false otherwise
+ */
+function trackFailedLogin($username) {
+    global $db;
+    $now = time();
+    
+    // Clean up old entries first
+    $cleanupTime = $now - ACCOUNT_LOCKOUT_DURATION;
+    $query = "DELETE FROM login_attempts WHERE username = :username AND timestamp < :cleanup_time";
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':username', $username);
+    $stmt->bindParam(':cleanup_time', $cleanupTime);
+    $stmt->execute();
+    
+    // Log this attempt
+    $query = "INSERT INTO login_attempts (username, ip, timestamp) 
+              VALUES (:username, :ip, :timestamp)";
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':username', $username);
+    $stmt->bindParam(':ip', $_SERVER['REMOTE_ADDR']);
+    $stmt->bindParam(':timestamp', $now);
+    $stmt->execute();
+    
+    // Count recent failed attempts
+    $query = "SELECT COUNT(*) as count FROM login_attempts 
+              WHERE username = :username AND timestamp > :time_window";
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':username', $username);
+    $stmt->bindParam(':time_window', $cleanupTime);
+    $stmt->execute();
+    
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $count = $result['count'];
+    
+    // Check if account should be locked
+    if ($count >= ACCOUNT_LOCKOUT_THRESHOLD) {
+        // Update user account status if needed
+        $query = "UPDATE admins SET is_locked = 1, locked_until = :locked_until 
+                  WHERE username = :username OR email = :email";
+        $stmt = $db->prepare($query);
+        $lockedUntil = $now + ACCOUNT_LOCKOUT_DURATION;
+        $stmt->bindParam(':locked_until', $lockedUntil);
+        $stmt->bindParam(':username', $username);
+        $stmt->bindParam(':email', $username); // In case username is actually an email
+        $stmt->execute();
+        
+        return true; // Account is locked
+    }
+    
+    return false; // Account is not locked
+}
+
+/**
+ * Check if account is locked
+ * @param string $username The username to check
+ * @return bool True if account is locked, false otherwise
+ */
+function isAccountLocked($username) {
+    global $db;
+    $now = time();
+    
+    $query = "SELECT is_locked, locked_until FROM admins 
+              WHERE (username = :username OR email = :email)";
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':username', $username);
+    $stmt->bindParam(':email', $username);
+    $stmt->execute();
+    
+    if ($stmt->rowCount() > 0) {
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($user['is_locked'] && $user['locked_until'] > $now) {
+            // Account is locked
+            $remainingTime = $user['locked_until'] - $now;
+            $minutes = ceil($remainingTime / 60);
+            return "Account is locked. Please try again in {$minutes} minutes.";
+        } else if ($user['is_locked']) {
+            // Lock period has expired, unlock the account
+            $query = "UPDATE admins SET is_locked = 0, locked_until = NULL 
+                      WHERE username = :username OR email = :email";
+            $stmt = $db->prepare($query);
+            $stmt->bindParam(':username', $username);
+            $stmt->bindParam(':email', $username);
+            $stmt->execute();
+        }
+    }
+    
+    return false; // Account is not locked
+}
+
+/**
+ * Reset failed login attempts after successful login
+ * @param string $username The username that logged in successfully
+ */
+function resetFailedLoginAttempts($username) {
+    global $db;
+    
+    $query = "DELETE FROM login_attempts WHERE username = :username";
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':username', $username);
+    $stmt->execute();
+}
+?>

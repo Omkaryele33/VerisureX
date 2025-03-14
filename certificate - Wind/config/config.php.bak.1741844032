@@ -1,0 +1,26 @@
+<?php
+/**
+ * Configuration File
+ * This file contains database credentials and other configuration settings
+ */
+
+// Include constants first if they haven't been included yet
+require_once __DIR__ . "/constants.php";
+
+// Database credentials
+define("DB_HOST", "localhost");
+define("DB_NAME", "certificate_db");
+define("DB_USER", "root");
+define("DB_PASS", "");
+
+// Error reporting
+ini_set("display_errors", 1);
+ini_set("display_startup_errors", 1);
+error_reporting(E_ALL);
+
+// Session settings
+ini_set("session.cookie_httponly", 1);
+ini_set("session.cookie_secure", 0);  // Set to 1 if using HTTPS
+ini_set("session.cookie_samesite", "Strict");
+ini_set("session.gc_maxlifetime", 3600);
+ini_set("session.use_strict_mode", 1);
